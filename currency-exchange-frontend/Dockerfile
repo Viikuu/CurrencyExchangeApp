@@ -1,0 +1,39 @@
+FROM node:22.15.0-alpine AS dev
+
+WORKDIR /app 
+
+COPY . .
+
+RUN npm ci
+
+EXPOSE 3000
+
+CMD ["npm", "run", "dev"]
+
+
+FROM node:22.15.0-alpine AS build
+
+WORKDIR /app
+
+COPY . .
+
+RUN npm ci && \
+  npm run lint && \
+  npm run build 
+
+FROM node:22.15.0-alpine AS prod
+
+WORKDIR /app
+
+ENV NODE_ENV=prod
+ENV PORT=3000
+
+COPY --from=build /app/package*.json ./
+COPY --from=build /app/.next ./.next
+COPY --from=build /app/next.config.ts ./
+
+RUN npm ci --only=production
+
+EXPOSE 3000
+
+CMD ["npm", "run", "start"]

@@ -1,0 +1,104 @@
+services:
+  app_prod:
+    build:
+      context: ./currency-exchange-backend
+      dockerfile: Dockerfile
+      target: prod
+    env_file: ./currency-exchange-backend/.env
+    environment:
+      DB_HOST: postgres
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_DATABASE: postgres
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres: 
+        condition: service_healthy
+    networks:
+      - backend
+      - frontend
+    profiles:
+      - prod
+
+  frontend_prod:
+    build:
+      context: ./currency-exchange-frontend
+      dockerfile: Dockerfile
+      target: prod
+    environment:
+      NODE_ENV: prod
+    ports:
+      - "3000:3000"
+    networks:
+      - frontend
+    profiles:
+      - prod
+
+  frontend:
+    build:
+      context: ./currency-exchange-frontend
+      dockerfile: Dockerfile
+      target: dev
+    environment:
+      NODE_ENV: local
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./currency-exchange-frontend:/app
+      - /app/node_modules
+    networks:
+      - frontend
+    profiles:
+      - dev
+  app:
+    build:
+      context: ./currency-exchange-backend
+      dockerfile: Dockerfile
+      target: dev
+    env_file: ./currency-exchange-backend/.env
+    environment:
+      NODE_ENV: local
+      DB_HOST: postgres
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_DATABASE: postgres
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./currency-exchange-backend:/app
+      - /app/node_modules
+    command: npm run start:dev
+    depends_on:
+      postgres: 
+        condition: service_healthy
+    networks:
+      - backend
+    profiles:
+      - dev
+   
+  postgres:
+    image: postgres:13-alpine
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - backend
+  
+volumes:
+  postgres:
+
+networks:
+  backend:
+  frontend:
